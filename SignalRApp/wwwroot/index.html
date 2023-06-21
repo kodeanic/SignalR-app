@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Group chat</title>
+</head>
+<body>
+<div id="loginForm">
+    <input type="text" id="login" placeholder="Ваше имя"/>
+    <input type="text" id="group" placeholder="Группа"/>
+    <input type="button" id="loginBtn" value="Войти"/>
+    <input type="button" id="exitBtn" value="Выйти"/>
+</div>
+
+<div id="inputForm">
+    <input type="text" id="message" placeholder="Ваше сообщение"/>
+    <input type="button" id="sendBtn" value="Отправить" disabled/>
+</div>
+
+<div id="chatroom"></div>
+
+<script src="js/node_modules/@microsoft/signalr/dist/browser/signalr.min.js"></script>
+<script>
+    const hubConnection = new signalR.HubConnectionBuilder()
+        .withUrl("/groupchat")
+        .build();
+
+    let login;
+    let room;
+
+    document.getElementById("loginBtn").addEventListener("click", () => {
+        login = document.getElementById("login").value;
+        room = document.getElementById("group").value;
+
+        hubConnection.invoke("JoinGroup", login, room);
+
+        document.getElementById("loginBtn").disabled = true;
+        document.getElementById("sendBtn").disabled = false;
+    });
+
+    document.getElementById("exitBtn").addEventListener("click", () => {
+        hubConnection.invoke("ExitFromGroup", login, room);
+
+        document.getElementById("sendBtn").disabled = true;
+        document.getElementById("loginBtn").disabled = false;
+    });
+
+    document.getElementById("sendBtn").addEventListener("click", () => {
+        let message = document.getElementById("message").value;
+
+        document.getElementById("message").value = null;
+
+        hubConnection.invoke("SendToGroup", login, room, message);
+    });
+
+    hubConnection.on("Receive", function (user, message) {
+        let userNameElem = document.createElement("b");
+        userNameElem.appendChild(document.createTextNode(user + ': '));
+
+        let elem = document.createElement("p");
+        elem.appendChild(userNameElem);
+        elem.appendChild(document.createTextNode(message));
+
+        let firstElem = document.getElementById("chatroom").firstChild;
+        document.getElementById("chatroom").insertBefore(elem, firstElem);
+    });
+
+    hubConnection.on("Notify", function (message) {
+        let notifyElem = document.createElement("b");
+        notifyElem.appendChild(document.createTextNode(message));
+
+        let elem = document.createElement("p");
+        elem.appendChild(notifyElem);
+
+        let firstElem = document.getElementById("chatroom").firstChild;
+        document.getElementById("chatroom").insertBefore(elem, firstElem);
+    });
+
+    hubConnection.start();
+</script>
+</body>
+</html>

@@ -1,0 +1,56 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Private chat</title>
+</head>
+<body>
+<div id="inputForm">
+    <input type="text" id="sender" placeholder="Ваше имя"/>
+    <input type="text" id="receiverId" placeholder="Id получателя"/>
+    <br/>
+    <input type="text" id="message" placeholder="Ваше сообщение"/>
+    <input type="button" id="sendBtn" value="Отправить"/>
+</div>
+
+<p>Мой Id:</p>
+<p id="connectionId"></p>
+
+<div id="chatroom"></div>
+
+<script src="js/node_modules/@microsoft/signalr/dist/browser/signalr.min.js"></script>
+<script>
+    const hubConnection = new signalR.HubConnectionBuilder()
+        .withUrl("/privatechat")
+        .build();
+
+    document.getElementById("sendBtn").addEventListener("click", () => {
+        let user = document.getElementById("sender").value;
+        let id = document.getElementById("receiverId").value;
+        let message = document.getElementById("message").value;
+
+        document.getElementById("message").value = null;
+
+        hubConnection.invoke("SendPrivate", user, id, message);
+    });
+
+    hubConnection.on("Receive", function (user, message) {
+        let userNameElem = document.createElement("b");
+        userNameElem.appendChild(document.createTextNode(user + ': '));
+
+        let elem = document.createElement("p");
+        elem.appendChild(userNameElem);
+        elem.appendChild(document.createTextNode(message));
+
+        let firstElem = document.getElementById("chatroom").firstChild;
+        document.getElementById("chatroom").insertBefore(elem, firstElem);
+    });
+    
+    hubConnection.start().then(function () {
+        hubConnection.invoke("GetConnectionId").then(function (id) {
+            document.getElementById("connectionId").innerText = id;
+        })
+    });
+</script>
+</body>
+</html>
